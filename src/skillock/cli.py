@@ -14,6 +14,11 @@ def home_dir() -> Path:
     return Path(os.environ.get("SKILLOCK_HOME") or Path.home())
 
 
+def _rmtree(path: Path) -> None:
+    # git marks object files read-only; plain rmtree fails on Windows (WinError 5)
+    shutil.rmtree(path, onerror=lambda f, p, e: (os.chmod(p, 0o644), f(p)))
+
+
 def _repo_url(spec: str) -> tuple[str, str | None]:
     repo, _, tag = spec.partition("@")
     url = (
@@ -82,7 +87,7 @@ def cmd_add(args) -> int:
     sha, pinned = git.resolve(url, tag)
     tmp = home_dir() / ".local/share/skillock/tmp"
     if tmp.exists():
-        shutil.rmtree(tmp)
+        _rmtree(tmp)
     git.clone_at(url, sha, tmp)
     try:
         skills = scanner.detect_skills(tmp)
@@ -118,7 +123,7 @@ def cmd_add(args) -> int:
     finally:
         # Clean up tmp clone after deploy
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
 
 
 def _diff(old_dir: Path, new_dir: Path) -> str:
@@ -151,7 +156,7 @@ def cmd_update(args) -> int:
             continue
         tmp = home_dir() / ".local/share/skillock/tmp"
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
         git.clone_at(e["repo"], sha, tmp)
         try:
             skills = scanner.detect_skills(tmp)
@@ -175,7 +180,7 @@ def cmd_update(args) -> int:
             print(f"updated {e['name']} -> {e['ref']}")
         finally:
             if tmp.exists():
-                shutil.rmtree(tmp)
+                _rmtree(tmp)
     store.write_lock(store.lock_path(home_dir()), entries)
     return rc
 
