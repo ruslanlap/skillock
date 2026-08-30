@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass(frozen=True)
 class Finding:
     rule: str
@@ -95,6 +96,7 @@ _RULES: list[tuple[str, str, str, re.Pattern]] = [
     ),
 ]
 
+
 def _is_binary(path: Path) -> bool:
     # ponytail: NUL-sniff first 8KiB — ceiling: crafted text with late NULs; fine for v0.1
     with path.open("rb") as fh:
@@ -120,7 +122,16 @@ def scan_tree(root: Path) -> list[Finding]:
         if ".git" in p.parts:
             continue
         if p.is_symlink():
-            out.append(Finding("symlink-entry", "P0", p.relative_to(root).as_posix(), 1, "symlink", "symlinks are not allowed in skills"))
+            out.append(
+                Finding(
+                    "symlink-entry",
+                    "P0",
+                    p.relative_to(root).as_posix(),
+                    1,
+                    "symlink",
+                    "symlinks are not allowed in skills",
+                )
+            )
             continue
         if not p.is_file():
             continue
