@@ -18,7 +18,10 @@ def _repo_url(spec: str) -> tuple[str, str | None]:
     repo, _, tag = spec.partition("@")
     url = (
         repo
-        if "://" in repo or repo.startswith(".") or repo.startswith("/")
+        if "://" in repo
+        or repo.startswith((".", "/"))
+        or Path(repo).drive  # Windows path like C:\... or C:/...
+        or (len(repo) > 1 and repo[1] == ":")
         else f"https://github.com/{repo}"
     )
     return url, tag or None
