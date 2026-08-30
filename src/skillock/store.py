@@ -80,10 +80,20 @@ def read_lock(path: Path) -> list[dict]:
     return out
 
 
+def _slug(repo: str) -> str:
+    base = repo.rstrip("/")
+    name = base.split("/")[-1]
+    owner = base.split("/")[-2] if "/" in base else "local"
+    raw = f"{owner}__{name}"
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", raw)
+    if slug != raw or len(slug) > 64:
+        # non-URL source (e.g. Windows path): deterministic short hash keeps it valid
+        slug = f"{slug[:48]}-{hashlib.sha256(raw.encode()).hexdigest()[:12]}"
+    return slug
+
+
 def store_dir_for(home: Path, repo: str, skill: str) -> Path:
-    name = repo.rstrip("/").split("/")[-1]
-    owner = repo.rstrip("/").split("/")[-2] if "/" in repo.rstrip("/") else "local"
-    return store_root(home) / f"{owner}__{name}" / skill
+    return store_root(home) / _slug(repo) / skill
 
 
 def _skill_name(skill_dir: Path) -> str:
