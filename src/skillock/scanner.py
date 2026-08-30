@@ -22,7 +22,11 @@ class Finding:
 # upgrade path: per-language parsers if FP/FN rate hurts
 _RULES: list[tuple[str, str, str, re.Pattern]] = [
     # name, severity, issue, pattern
-    ("destructive-rm", "P0", "destructive recursive deletion", re.compile(r"\brm\s+[^|\n;]*-[a-zA-Z]*r[a-zA-Z]*f")),
+    # Matches rm with -r/-R and -f flags in any order/spacing, or --recursive and --force
+    ("destructive-rm", "P0", "destructive recursive deletion", re.compile(
+        r"\brm\b(?=.*(?:(?<!-)-[a-zA-Z]*[rR]|--recursive))(?=.*(?:(?<!-)-[a-zA-Z]*[fF]|--force))[^|\n;]*",
+        re.IGNORECASE
+    )),
     ("sudo-execution", "P0", "privilege escalation attempt", re.compile(r"^\s*sudo\b", re.M)),
     ("curl-pipe-shell", "P0", "remote script piped into shell", re.compile(r"\b(curl|wget)\b[^|\n;]*\|\s*(ba|z|da|k)?sh\b")),
     ("eval-injection", "P0", "dynamic code execution", re.compile(r"\b(eval|exec)\s*\(")),
