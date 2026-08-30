@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-08-30
+
+### Fixed
+- Windows path handling for local repos and store slugs now works reliably across drive-letter paths.
+- CLI output avoids non-ASCII arrows that broke Windows cp1252 consoles.
+- Cleanup of read-only Git objects no longer fails on Windows temp directories.
+- Audit coverage now records and flags symlink entries instead of letting directory symlinks bypass integrity checks.
+
+### Changed
+- CI now includes the locked coverage dependency and updated GitHub Actions versions.
+- README badges were moved to the top and a changelog file was added to the repo.
+
 ## [0.1.3] - 2026-08-30
 
 ### Added

@@ -1,6 +1,8 @@
 import subprocess
 import sys
 
+from skillock import __version__
+
 
 def run(*args):
     return subprocess.run([sys.executable, "-m", "skillock", *args], capture_output=True, text=True)
@@ -9,7 +11,7 @@ def run(*args):
 def test_version():
     r = run("--version")
     assert r.returncode == 0
-    assert "0.1.0" in r.stdout
+    assert __version__ in r.stdout
 
 
 # Task 5 tests
