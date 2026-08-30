@@ -36,7 +36,7 @@ def _agents_from_links(links: list[str], home: Path) -> list[str]:
             agent_dir = rel.parts[0]
             # Map back to agent key
             for agent_key, agent_path in store.AGENTS.items():
-                if agent_path.split("/")[-2:] == rel.parts[:2]:
+                if agent_path.split("/")[-2:] == list(rel.parts[:2]):
                     out.append(agent_key)
                     break
             else:
@@ -108,6 +108,28 @@ def cmd_add(args) -> int:
             shutil.rmtree(tmp)
 
 
+def cmd_list(args) -> int:
+    entries = store.read_lock(store.lock_path(home_dir()))
+    if not entries:
+        print("nothing installed")
+        return 0
+    for e in entries:
+        verdict = "clean" if not e.get("findings") else f"{len(e['findings'])} finding(s)"
+        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] → {','.join(e['agents'])}")
+    return 0
+
+
+def cmd_remove(args) -> int:
+    entries = store.read_lock(store.lock_path(home_dir()))
+    entry = next((e for e in entries if e["name"] == args.skill), None)
+    if entry is None:
+        raise SkillockError(f"skill '{args.skill}' is not installed")
+    store.undeploy(entry, home_dir())
+    store.write_lock(store.lock_path(home_dir()), [e for e in entries if e["name"] != args.skill])
+    print(f"removed {args.skill}")
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="skillock")
     p.add_argument("--version", action="version", version=f"skillock {__version__}")
@@ -118,6 +140,11 @@ def main(argv=None):
     a.add_argument("--agents", default="claude,codex,agents,cursor")
     a.add_argument("--yes", action="store_true")
     a.set_defaults(fn=cmd_add)
+    a = sub.add_parser("list")
+    a.set_defaults(fn=cmd_list)
+    a = sub.add_parser("remove")
+    a.add_argument("skill")
+    a.set_defaults(fn=cmd_remove)
     args = p.parse_args(argv)
     if getattr(args, "fn", None) is None:
         p.print_help()
