@@ -117,7 +117,12 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
 def scan_tree(root: Path) -> list[Finding]:
     out: list[Finding] = []
     for p in sorted(root.rglob("*")):
-        if not p.is_file() or ".git" in p.parts:
+        if ".git" in p.parts:
+            continue
+        if p.is_symlink():
+            out.append(Finding("symlink-entry", "P0", p.relative_to(root).as_posix(), 1, "symlink", "symlinks are not allowed in skills"))
+            continue
+        if not p.is_file():
             continue
         out.extend(scan_file(p, root))
     return out
