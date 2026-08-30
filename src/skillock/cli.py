@@ -192,6 +192,26 @@ def cmd_remove(args) -> int:
     return 0
 
 
+def cmd_audit(args) -> int:
+    bad = False
+    for e in store.read_lock(store.lock_path(home_dir())):
+        d = store.store_dir_for(home_dir(), e["repo"], e["name"])
+        findings = scanner.scan_tree(d)
+        p0 = [f for f in findings if f.severity == "P0"]
+        for f in p0:
+            print(f"DRIFT  {e['name']} {f.file}:{f.line} {f.rule}")
+        cur = store.hash_tree(d)
+        for fp, h in e["files"].items():
+            if cur.get(fp) != h:
+                print(f"TAMPERED {e['name']}/{fp}")
+                bad = True
+        if p0:
+            bad = True
+        if not p0 and all(cur.get(fp) == h for fp, h in e["files"].items()):
+            print(f"{e['name']}: clean")
+    return 1 if bad else 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="skillock")
     p.add_argument("--version", action="version", version=f"skillock {__version__}")
@@ -211,6 +231,8 @@ def main(argv=None):
     a.add_argument("skill", nargs="?")
     a.add_argument("--yes", action="store_true")
     a.set_defaults(fn=cmd_update)
+    a = sub.add_parser("audit")
+    a.set_defaults(fn=cmd_audit)
     args = p.parse_args(argv)
     if getattr(args, "fn", None) is None:
         p.print_help()
