@@ -3,9 +3,8 @@ from __future__ import annotations
 import hashlib
 import re
 import shutil
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 from skillock.errors import SkillockError
 
@@ -46,8 +45,7 @@ def hash_tree(root: Path) -> dict[str, str]:
 
 
 def _esc(s: str) -> str:
-    return (s.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
-             .replace('"', '\\"'))
+    return s.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace('"', '\\"')
 
 
 # ponytail: hand-rolled flat TOML writer (~30 lines) instead of a dependency —
@@ -58,8 +56,10 @@ def write_lock(path: Path, entries: list[dict]) -> None:
         lines.append("[[skill]]")
         for k in ("name", "repo", "ref", "pinned", "sha", "installed"):
             lines.append(f'{k} = "{_esc(str(e[k]))}"')
-        lines.append(f'agents = [{", ".join(chr(34) + _esc(a) + chr(34) for a in e["agents"])}]')
-        lines.append(f'findings = [{", ".join(chr(34) + _esc(f) + chr(34) for f in e.get("findings", []))}]')
+        lines.append(f"agents = [{', '.join(chr(34) + _esc(a) + chr(34) for a in e['agents'])}]")
+        lines.append(
+            f"findings = [{', '.join(chr(34) + _esc(f) + chr(34) for f in e.get('findings', []))}]"
+        )
         for fp, h in e["files"].items():
             lines.append(f'[skill.files."{_esc(fp)}"]')
             lines.append(f'sha256 = "{h}"')
@@ -80,10 +80,20 @@ def read_lock(path: Path) -> list[dict]:
     return out
 
 
+def _slug(repo: str) -> str:
+    base = repo.rstrip("/")
+    name = base.split("/")[-1]
+    owner = base.split("/")[-2] if "/" in base else "local"
+    raw = f"{owner}__{name}"
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", raw)
+    if slug != raw or len(slug) > 64:
+        # non-URL source (e.g. Windows path): deterministic short hash keeps it valid
+        slug = f"{slug[:48]}-{hashlib.sha256(raw.encode()).hexdigest()[:12]}"
+    return slug
+
+
 def store_dir_for(home: Path, repo: str, skill: str) -> Path:
-    name = repo.rstrip("/").split("/")[-1]
-    owner = repo.rstrip("/").split("/")[-2] if "/" in repo.rstrip("/") else "local"
-    return store_root(home) / f"{owner}__{name}" / skill
+    return store_root(home) / _slug(repo) / skill
 
 
 def _skill_name(skill_dir: Path) -> str:
@@ -95,7 +105,7 @@ def _skill_name(skill_dir: Path) -> str:
             for line in lines[1:]:
                 if line.strip() == "---":
                     break
-                if (m := re.match(r"^name:\s*(.+?)\s*$", line)):
+                if m := re.match(r"^name:\s*(.+?)\s*$", line):
                     return m.group(1)
     return skill_dir.name
 
