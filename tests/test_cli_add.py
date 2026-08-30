@@ -1,8 +1,10 @@
-import subprocess, sys
+import subprocess
+import sys
+
 
 def run(*args):
-    return subprocess.run([sys.executable, "-m", "skillock", *args],
-                          capture_output=True, text=True)
+    return subprocess.run([sys.executable, "-m", "skillock", *args], capture_output=True, text=True)
+
 
 def test_version():
     r = run("--version")
@@ -12,16 +14,15 @@ def test_version():
 
 # Task 5 tests
 import os
-import pytest
-from conftest import make_repo
 
 
 def run_add(*args, home=None):
     env = dict(os.environ)
     if home:
         env["SKILLOCK_HOME"] = str(home)
-    return subprocess.run([sys.executable, "-m", "skillock", *args],
-                          capture_output=True, text=True, env=env)
+    return subprocess.run(
+        [sys.executable, "-m", "skillock", *args], capture_output=True, text=True, env=env
+    )
 
 
 def test_add_benign(home, benign_repo):

@@ -18,10 +18,17 @@ def run(*args: str, cwd: Path | None = None) -> str:
 
 def tags(url: Path | str) -> list[str]:
     out = run("ls-remote", "--tags", str(url))
-    names = sorted({m.group(1) for t in out.splitlines()
-                    if (m := re.search(r"refs/tags/([^^\n]+)$", t)) and _TAG_RE.match(m.group(1))})
+    names = sorted(
+        {
+            m.group(1)
+            for t in out.splitlines()
+            if (m := re.search(r"refs/tags/([^^\n]+)$", t)) and _TAG_RE.match(m.group(1))
+        }
+    )
+
     def key(t: str):
         return tuple(int(x) for x in t.lstrip("v").split("."))
+
     return sorted(names, key=key, reverse=True)
 
 
@@ -45,8 +52,9 @@ def clone_at(url: Path | str, sha: str, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     run("init", cwd=dest)
     run("remote", "add", "origin", str(url), cwd=dest)
-    p = subprocess.run(["git", "fetch", "--depth", "1", "origin", sha],
-                       cwd=dest, capture_output=True, text=True)
+    p = subprocess.run(
+        ["git", "fetch", "--depth", "1", "origin", sha], cwd=dest, capture_output=True, text=True
+    )
     if p.returncode != 0:
         raise SkillockError(f"cannot fetch {sha[:12]}: {p.stderr.strip()[:200]}")
     run("checkout", "FETCH_HEAD", cwd=dest)
