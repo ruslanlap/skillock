@@ -1,0 +1,25 @@
+Script started on 2026-08-30 18:51:22+00:00 [COMMAND="echo 'Testing brainstorming (should block):'; uvx --from . skillock add obra/superpowers --skill brainstorming --agents agents --yes; echo 'Testing test-driven-development (should allow):'; uvx --from . skillock add obra/superpowers --skill test-driven-development --agents agents --yes" <not executed on terminal>]
+Testing brainstorming (should block):
+BLOCKED — P0 findings:
+  P0 scripts/server.cjs:85 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:90 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:100 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:101 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:102 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:112 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:113 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:123 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:133 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:134 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:293 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:533 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:539 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:540 eval-injection — dynamic code execution | exec(
+  P0 scripts/server.cjs:540 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:555 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/server.cjs:561 sensitive-file-read — reads credentials/ssh/env | .env
+  P0 scripts/stop-server.sh:114 destructive-rm — destructive recursive deletion | rm -rf "$SESSION_DIR"
+Testing test-driven-development (should allow):
+locked test-driven-development @ v6.3.0 → 
+
+Script done on 2026-08-30 18:51:27+00:00 [COMMAND_EXIT_CODE="0"]

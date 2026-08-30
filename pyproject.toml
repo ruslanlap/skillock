@@ -16,5 +16,29 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/skillock"]
 
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+exclude = [".superpowers", "dist", "build"]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "T10"]
+ignore = ["S101", "T201"]
+fixable = ["F", "I", "UP", "W", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+namespace_packages = true
+
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "twine>=5.0",
+]
