@@ -3,9 +3,8 @@ from __future__ import annotations
 import hashlib
 import re
 import shutil
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 from skillock.errors import SkillockError
 
@@ -46,8 +45,7 @@ def hash_tree(root: Path) -> dict[str, str]:
 
 
 def _esc(s: str) -> str:
-    return (s.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
-             .replace('"', '\\"'))
+    return s.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace('"', '\\"')
 
 
 # ponytail: hand-rolled flat TOML writer (~30 lines) instead of a dependency —
@@ -58,8 +56,10 @@ def write_lock(path: Path, entries: list[dict]) -> None:
         lines.append("[[skill]]")
         for k in ("name", "repo", "ref", "pinned", "sha", "installed"):
             lines.append(f'{k} = "{_esc(str(e[k]))}"')
-        lines.append(f'agents = [{", ".join(chr(34) + _esc(a) + chr(34) for a in e["agents"])}]')
-        lines.append(f'findings = [{", ".join(chr(34) + _esc(f) + chr(34) for f in e.get("findings", []))}]')
+        lines.append(f"agents = [{', '.join(chr(34) + _esc(a) + chr(34) for a in e['agents'])}]")
+        lines.append(
+            f"findings = [{', '.join(chr(34) + _esc(f) + chr(34) for f in e.get('findings', []))}]"
+        )
         for fp, h in e["files"].items():
             lines.append(f'[skill.files."{_esc(fp)}"]')
             lines.append(f'sha256 = "{h}"')
@@ -95,7 +95,7 @@ def _skill_name(skill_dir: Path) -> str:
             for line in lines[1:]:
                 if line.strip() == "---":
                     break
-                if (m := re.match(r"^name:\s*(.+?)\s*$", line)):
+                if m := re.match(r"^name:\s*(.+?)\s*$", line):
                     return m.group(1)
     return skill_dir.name
 
