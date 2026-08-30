@@ -3,3 +3,10 @@
 __pycache__/
 dist/
 .pytest_cache/
+*.log
+*.txt
+!README.md
+!CONTRIBUTING.md
+!SECURITY.md
+!CHANGELOG.md
+SHOW_HN_DRAFT.md
