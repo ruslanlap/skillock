@@ -45,6 +45,14 @@ def test_audit_detects_tampering(home, benign_repo):
     assert r.returncode == 1 and "TAMPERED" in r.stdout and "SKILL.md" in r.stdout
 
 
+def test_audit_detects_unexpected_file(home, benign_repo):
+    assert add(benign_repo, home).returncode == 0
+    (skill_dir(home, benign_repo) / "unreviewed.py").write_text("print('added later')\n")
+    r = run("audit", home=home)
+    assert r.returncode == 1
+    assert "TAMPERED" in r.stdout and "unreviewed.py" in r.stdout
+
+
 def test_audit_detects_drift_even_if_hashes_ok(home, benign_repo):
     assert add(benign_repo, home).returncode == 0
     f = skill_dir(home, benign_repo) / "SKILL.md"
