@@ -14,11 +14,19 @@ def home_dir() -> Path:
     return Path(os.environ.get("SKILLOCK_HOME") or Path.home())
 
 
+def _rmtree(path: Path) -> None:
+    # git marks object files read-only; plain rmtree fails on Windows (WinError 5)
+    shutil.rmtree(path, onerror=lambda f, p, e: (os.chmod(p, 0o644), f(p)))
+
+
 def _repo_url(spec: str) -> tuple[str, str | None]:
     repo, _, tag = spec.partition("@")
     url = (
         repo
-        if "://" in repo or repo.startswith(".") or repo.startswith("/")
+        if "://" in repo
+        or repo.startswith((".", "/"))
+        or Path(repo).drive  # Windows path like C:\... or C:/...
+        or (len(repo) > 1 and repo[1] == ":")
         else f"https://github.com/{repo}"
     )
     return url, tag or None
@@ -79,7 +87,7 @@ def cmd_add(args) -> int:
     sha, pinned = git.resolve(url, tag)
     tmp = home_dir() / ".local/share/skillock/tmp"
     if tmp.exists():
-        shutil.rmtree(tmp)
+        _rmtree(tmp)
     git.clone_at(url, sha, tmp)
     try:
         skills = scanner.detect_skills(tmp)
@@ -110,12 +118,12 @@ def cmd_add(args) -> int:
         entries = [e for e in store.read_lock(lp) if e["name"] != skill.name]
         entries.append(entry)
         store.write_lock(store.lock_path(home_dir()), entries)
-        print(f"locked {skill.name} @ {entry['ref']} → {', '.join(links)}")
+        print(f"locked {skill.name} @ {entry['ref']} -> {', '.join(links)}")
         return 0
     finally:
         # Clean up tmp clone after deploy
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
 
 
 def _diff(old_dir: Path, new_dir: Path) -> str:
@@ -148,7 +156,7 @@ def cmd_update(args) -> int:
             continue
         tmp = home_dir() / ".local/share/skillock/tmp"
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
         git.clone_at(e["repo"], sha, tmp)
         try:
             skills = scanner.detect_skills(tmp)
@@ -169,10 +177,10 @@ def cmd_update(args) -> int:
             e["ref"], e["pinned"] = (newest, "tag") if pinned == "tag" else (sha, "commit")
             e["files"] = store.hash_tree(store.store_dir_for(home_dir(), e["repo"], e["name"]))
             e["findings"] = [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"]
-            print(f"updated {e['name']} → {e['ref']}")
+            print(f"updated {e['name']} -> {e['ref']}")
         finally:
             if tmp.exists():
-                shutil.rmtree(tmp)
+                _rmtree(tmp)
     store.write_lock(store.lock_path(home_dir()), entries)
     return rc
 
@@ -184,7 +192,7 @@ def cmd_list(args) -> int:
         return 0
     for e in entries:
         verdict = "clean" if not e.get("findings") else f"{len(e['findings'])} finding(s)"
-        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] → {','.join(e['agents'])}")
+        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] -> {','.join(e['agents'])}")
     return 0
 
 

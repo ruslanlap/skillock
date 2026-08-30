@@ -15,14 +15,8 @@ def run(*args, home=None):
 
 
 def skill_dir(home, benign_repo):
-    # real store path: store_dir_for uses last two segments of the repo URL;
-    # for the local-path fixture that's <tmp_path.name>__benign.git
-    return (
-        home
-        / ".local/share/skillock/store"
-        / f"{benign_repo.parent.name}__{benign_repo.name}"
-        / "polars"
-    )
+    # use production slug logic — must match what `add` created
+    return store.store_dir_for(home, str(benign_repo), "polars")
 
 
 def add(benign_repo, home):
