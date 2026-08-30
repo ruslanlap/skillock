@@ -113,7 +113,7 @@ def cmd_add(args) -> int:
         entries = [e for e in store.read_lock(lp) if e["name"] != skill.name]
         entries.append(entry)
         store.write_lock(store.lock_path(home_dir()), entries)
-        print(f"locked {skill.name} @ {entry['ref']} → {', '.join(links)}")
+        print(f"locked {skill.name} @ {entry['ref']} -> {', '.join(links)}")
         return 0
     finally:
         # Clean up tmp clone after deploy
@@ -172,7 +172,7 @@ def cmd_update(args) -> int:
             e["ref"], e["pinned"] = (newest, "tag") if pinned == "tag" else (sha, "commit")
             e["files"] = store.hash_tree(store.store_dir_for(home_dir(), e["repo"], e["name"]))
             e["findings"] = [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"]
-            print(f"updated {e['name']} → {e['ref']}")
+            print(f"updated {e['name']} -> {e['ref']}")
         finally:
             if tmp.exists():
                 shutil.rmtree(tmp)
@@ -187,7 +187,7 @@ def cmd_list(args) -> int:
         return 0
     for e in entries:
         verdict = "clean" if not e.get("findings") else f"{len(e['findings'])} finding(s)"
-        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] → {','.join(e['agents'])}")
+        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] -> {','.join(e['agents'])}")
     return 0
 
 
