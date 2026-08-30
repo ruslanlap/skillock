@@ -17,6 +17,15 @@ def test_lock_roundtrip(tmp_path):
     assert out["findings"] == ["P1 network-call-no-auth"]
 
 
+def test_lock_roundtrip_escapes_newlines(tmp_path):
+    # trust boundary: raw \n in a TOML basic string corrupts the lockfile
+    nasty = 'line1\nline"quote"\\end'
+    p = tmp_path / "skillock.lock"
+    write_lock(p, [{**ENTRY, "findings": [nasty]}])
+    (out,) = read_lock(p)
+    assert out["findings"] == [nasty]
+
+
 def test_lock_read_missing_returns_empty(tmp_path):
     assert read_lock(tmp_path / "nope.lock") == []
 

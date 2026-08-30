@@ -46,7 +46,8 @@ def hash_tree(root: Path) -> dict[str, str]:
 
 
 def _esc(s: str) -> str:
-    return s.replace("\\", "\\\\").replace('"', '\\"')
+    return (s.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
+             .replace('"', '\\"'))
 
 
 # ponytail: hand-rolled flat TOML writer (~30 lines) instead of a dependency —
