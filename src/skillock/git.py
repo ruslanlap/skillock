@@ -6,7 +6,7 @@ from pathlib import Path
 
 from skillock.errors import SkillockError
 
-_TAG_RE = re.compile(r"^v?\d+(\.\d+)*(\.\d+)?$")
+_TAG_RE = re.compile(r"^v?\d+\.\d+(\.\d+)?$")  # semver-ish: 2-3 components, no bare v1
 
 
 def run(*args: str, cwd: Path | None = None) -> str:
