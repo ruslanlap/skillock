@@ -6,9 +6,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-FENCE_RE = re.compile(r"^\s*```")
-
-
 @dataclass(frozen=True)
 class Finding:
     rule: str
@@ -98,9 +95,6 @@ _RULES: list[tuple[str, str, str, re.Pattern]] = [
     ),
 ]
 
-MD_EXT = {".md", ".markdown"}
-
-
 def _is_binary(path: Path) -> bool:
     # ponytail: NUL-sniff first 8KiB — ceiling: crafted text with late NULs; fine for v0.1
     with path.open("rb") as fh:
@@ -112,15 +106,7 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
     out: list[Finding] = []
     if _is_binary(path):
         return out
-    in_fence = False
-    is_md = path.suffix.lower() in MD_EXT
     for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
-        if is_md:
-            if FENCE_RE.match(line):
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                continue
         for name, sev, issue, pat in _RULES:
             m = pat.search(line)
             if m:
