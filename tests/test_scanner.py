@@ -1,5 +1,6 @@
 from pathlib import Path
-from skillock.scanner import scan_tree, detect_skills, Finding
+
+from skillock.scanner import Finding, detect_skills, scan_tree
 
 
 def make(root: Path, rel: str, text: str):
@@ -52,23 +53,27 @@ def test_destructive_rm_flag_orders(tmp_path):
     for i, line in enumerate(cases):
         make(tmp_path, f"test_{i}.txt", line + "\n")
     findings = [f for f in scan_tree(tmp_path) if f.rule == "destructive-rm"]
-    assert len(findings) == len(cases), f"Expected {len(cases)} findings, got {len(findings)}: {[f.match for f in findings]}"
+    assert len(findings) == len(cases), (
+        f"Expected {len(cases)} findings, got {len(findings)}: {[f.match for f in findings]}"
+    )
 
 
 def test_destructive_rm_false_negatives(tmp_path):
     # These should NOT be caught (missing either -r or -f)
     cases = [
-        "rm -r /tmp/dir",      # only -r
-        "rm -f /tmp/file",     # only -f
-        "rm -v /tmp/dir",      # neither
-        "rm /tmp/file",        # no flags
-        "rm --recursive /path", # only --recursive
-        "rm --force /path",    # only --force
+        "rm -r /tmp/dir",  # only -r
+        "rm -f /tmp/file",  # only -f
+        "rm -v /tmp/dir",  # neither
+        "rm /tmp/file",  # no flags
+        "rm --recursive /path",  # only --recursive
+        "rm --force /path",  # only --force
     ]
     for i, line in enumerate(cases):
         make(tmp_path, f"safe_{i}.txt", line + "\n")
     findings = [f for f in scan_tree(tmp_path) if f.rule == "destructive-rm"]
-    assert len(findings) == 0, f"Expected 0 findings, got {len(findings)}: {[f.match for f in findings]}"
+    assert len(findings) == 0, (
+        f"Expected 0 findings, got {len(findings)}: {[f.match for f in findings]}"
+    )
 
 
 def test_all_p0_rules_present(tmp_path):
