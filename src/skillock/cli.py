@@ -216,13 +216,17 @@ def cmd_audit(args) -> int:
         for f in p0:
             print(f"DRIFT  {e['name']} {f.file}:{f.line} {f.rule}")
         cur = store.hash_tree(d)
-        for fp, h in e["files"].items():
+        expected_files = e["files"]
+        for fp, h in expected_files.items():
             if cur.get(fp) != h:
                 print(f"TAMPERED {e['name']}/{fp}")
                 bad = True
+        for fp in sorted(set(cur) - set(expected_files)):
+            print(f"TAMPERED {e['name']}/{fp} (unexpected file)")
+            bad = True
         if p0:
             bad = True
-        if not p0 and all(cur.get(fp) == h for fp, h in e["files"].items()):
+        if not p0 and cur == expected_files:
             print(f"{e['name']}: clean")
     return 1 if bad else 0
 

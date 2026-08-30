@@ -51,6 +51,15 @@ def test_hash_tree(tmp_path):
     assert h["SKILL.md"] == sha256_file(tmp_path / "SKILL.md")
 
 
+def test_hash_tree_records_symlink(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "note.txt").write_text("hi")
+    (tmp_path / "linkdir").symlink_to(outside, target_is_directory=True)
+    h = hash_tree(tmp_path)
+    assert h["linkdir"].startswith("symlink:")
+
+
 def test_deploy_symlinks_into_existing_agents(tmp_path, home):
     src = tmp_path / "skill"
     src.mkdir()

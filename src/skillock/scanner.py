@@ -6,8 +6,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-FENCE_RE = re.compile(r"^\s*```")
-
 
 @dataclass(frozen=True)
 class Finding:
@@ -98,8 +96,6 @@ _RULES: list[tuple[str, str, str, re.Pattern]] = [
     ),
 ]
 
-MD_EXT = {".md", ".markdown"}
-
 
 def _is_binary(path: Path) -> bool:
     # ponytail: NUL-sniff first 8KiB — ceiling: crafted text with late NULs; fine for v0.1
@@ -112,15 +108,7 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
     out: list[Finding] = []
     if _is_binary(path):
         return out
-    in_fence = False
-    is_md = path.suffix.lower() in MD_EXT
     for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
-        if is_md:
-            if FENCE_RE.match(line):
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                continue
         for name, sev, issue, pat in _RULES:
             m = pat.search(line)
             if m:
@@ -131,7 +119,21 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
 def scan_tree(root: Path) -> list[Finding]:
     out: list[Finding] = []
     for p in sorted(root.rglob("*")):
-        if not p.is_file() or ".git" in p.parts:
+        if ".git" in p.parts:
+            continue
+        if p.is_symlink():
+            out.append(
+                Finding(
+                    "symlink-entry",
+                    "P0",
+                    p.relative_to(root).as_posix(),
+                    1,
+                    "symlink",
+                    "symlinks are not allowed in skills",
+                )
+            )
+            continue
+        if not p.is_file():
             continue
         out.extend(scan_file(p, root))
     return out

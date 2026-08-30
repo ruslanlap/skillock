@@ -39,8 +39,14 @@ def sha256_file(p: Path) -> str:
 def hash_tree(root: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     for p in sorted(root.rglob("*")):
-        if p.is_file() and ".git" not in p.parts:
-            out[p.relative_to(root).as_posix()] = sha256_file(p)
+        if ".git" in p.parts:
+            continue
+        rel = p.relative_to(root).as_posix()
+        if p.is_symlink():
+            out[rel] = f"symlink:{p.readlink().as_posix()}"
+            continue
+        if p.is_file():
+            out[rel] = sha256_file(p)
     return out
 
 
