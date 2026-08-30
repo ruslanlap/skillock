@@ -41,6 +41,24 @@ def test_deploy_symlinks_into_existing_agents(tmp_path, home):
     assert len(links) == 2
 
 
+def test_deploy_refuses_non_skillock_path(tmp_path, home):
+    # data-loss boundary: a real user dir at the agent target must never be rmtree'd
+    from skillock.errors import SkillockError
+    src = tmp_path / "skill"; src.mkdir()
+    (src / "SKILL.md").write_text("---\nname: s\n---\n")
+    target = home / ".claude" / "skills" / "s"
+    target.mkdir()
+    (target / "my-notes.md").write_text("user data")
+    try:
+        deploy(src, home, "https://github.com/x/y", ["claude"])
+    except SkillockError as e:
+        assert "refusing to replace non-skillock path" in str(e)
+    else:
+        raise AssertionError("expected SkillockError")
+    assert (target / "my-notes.md").read_text() == "user data"
+    assert not target.is_symlink()
+
+
 def test_undeploy_removes_only_ours(tmp_path, home):
     src = tmp_path / "skill"; src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")

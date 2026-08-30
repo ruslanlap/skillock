@@ -112,7 +112,9 @@ def deploy(skill_dir: Path, home: Path, repo: str, agents: list[str]) -> list[st
             continue
         link = adir / dest.name
         if link.is_symlink() or link.exists():
-            link.unlink() if link.is_symlink() else shutil.rmtree(link)
+            if not (link.is_symlink() and store_root(home) in link.resolve().parents):
+                raise SkillockError(f"refusing to replace non-skillock path: {link}")
+            link.unlink()
         link.symlink_to(dest)
         links.append(str(link))
     return links
