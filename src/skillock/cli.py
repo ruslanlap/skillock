@@ -1,5 +1,7 @@
 import argparse
+import difflib
 import os
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,12 +49,34 @@ def _agents_from_links(links: list[str], home: Path) -> list[str]:
     return out
 
 
+def _gate(findings, yes) -> int | None:
+    """Shared security gate: returns 1 to abort, None to proceed."""
+    p0 = [f for f in findings if f.severity == "P0"]
+    p1 = [f for f in findings if f.severity == "P1"]
+    p2 = [f for f in findings if f.severity == "P2"]
+    if p0:
+        print("BLOCKED — P0 findings:")
+        _print_findings(p0)
+        return 1
+    if p1 and not yes:
+        print("P1 findings:")
+        _print_findings(p1)
+        try:
+            if not input("proceed? [y/N] ").strip().lower().startswith("y"):
+                return 1
+        except EOFError:
+            return 1
+    if p2:
+        _print_findings(p2)
+        print(f"installed with {len(p2)} note(s)")
+    return None
+
+
 def cmd_add(args) -> int:
     url, tag = _repo_url(args.repo)
     sha, pinned = git.resolve(url, tag)
     tmp = home_dir() / ".local/share/skillock/tmp"
     if tmp.exists():
-        import shutil
         shutil.rmtree(tmp)
     git.clone_at(url, sha, tmp)
     try:
@@ -66,24 +90,8 @@ def cmd_add(args) -> int:
             raise SkillockError(f"multiple/zero skills detected: {', '.join(names)} — pass --skill")
         skill = next(s for s in skills if s.name == (args.skill or names[0]))
         findings = scanner.scan_tree(skill)
-        p0 = [f for f in findings if f.severity == "P0"]
-        p1 = [f for f in findings if f.severity == "P1"]
-        p2 = [f for f in findings if f.severity == "P2"]
-        if p0:
-            print("BLOCKED — P0 findings:")
-            _print_findings(p0)
-            return 1
-        if p1 and not args.yes:
-            print("P1 findings:")
-            _print_findings(p1)
-            try:
-                if not input("proceed? [y/N] ").strip().lower().startswith("y"):
-                    return 1
-            except EOFError:
-                return 1
-        if p2:
-            _print_findings(p2)
-            print(f"installed with {len(p2)} note(s)")
+        if (gate := _gate(findings, args.yes)) is not None:
+            return gate
         links = store.deploy(skill, home_dir(), url, args.agents.split(","))
         entry = {
             "name": skill.name,
@@ -94,7 +102,7 @@ def cmd_add(args) -> int:
             "installed": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "agents": _agents_from_links(links, home_dir()),
             "files": store.hash_tree(store.store_dir_for(home_dir(), url, skill.name)),
-            "findings": [f"{f.severity} {f.rule}" for f in p1 + p2],
+            "findings": [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"],
         }
         entries = [e for e in store.read_lock(store.lock_path(home_dir())) if e["name"] != skill.name]
         entries.append(entry)
@@ -103,9 +111,63 @@ def cmd_add(args) -> int:
         return 0
     finally:
         # Clean up tmp clone after deploy
-        import shutil
         if tmp.exists():
             shutil.rmtree(tmp)
+
+
+def _diff(old_dir: Path, new_dir: Path) -> str:
+    out = []
+    old = store.hash_tree(old_dir); new = store.hash_tree(new_dir)
+    for f in sorted(set(old) | set(new)):
+        a = (old_dir / f).read_text(errors="replace") if f in old else ""
+        b = (new_dir / f).read_text(errors="replace") if f in new else ""
+        if a != b:
+            out.extend(difflib.unified_diff(a.splitlines(True), b.splitlines(True),
+                                            fromfile=f"a/{f}", tofile=f"b/{f}"))
+    return "".join(out)
+
+
+def cmd_update(args) -> int:
+    entries = store.read_lock(store.lock_path(home_dir()))
+    pool = [e for e in entries if not args.skill or e["name"] == args.skill]
+    if args.skill and not pool:
+        raise SkillockError(f"skill '{args.skill}' is not installed")
+    rc = 0
+    for e in pool:
+        sha, pinned = git.resolve(e["repo"], None)
+        newest = git.tags(e["repo"])[0] if git.tags(e["repo"]) else sha
+        if newest == e["ref"] or sha == e["sha"]:
+            print(f"{e['name']}: already up to date")
+            continue
+        tmp = home_dir() / ".local/share/skillock/tmp"
+        if tmp.exists():
+            shutil.rmtree(tmp)
+        git.clone_at(e["repo"], sha, tmp)
+        try:
+            skills = scanner.detect_skills(tmp)
+            if not any(s.name == e["name"] for s in skills):
+                print(f"{e['name']}: skill no longer present in {e['repo']}, skipping")
+                rc = 1
+                continue
+            skill = next(s for s in skills if s.name == e["name"])
+            findings = scanner.scan_tree(skill)
+            if (gate := _gate(findings, args.yes)) is not None:
+                print(f"{e['name']}: refusing update, keeping {e['ref']}")
+                rc = 1
+                continue
+            old_dir = store.store_dir_for(home_dir(), e["repo"], e["name"])
+            print(_diff(old_dir, skill))
+            store.deploy(skill, home_dir(), e["repo"], e["agents"])
+            e["sha"] = sha
+            e["ref"], e["pinned"] = (newest, "tag") if pinned == "tag" else (sha, "commit")
+            e["files"] = store.hash_tree(store.store_dir_for(home_dir(), e["repo"], e["name"]))
+            e["findings"] = [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"]
+            print(f"updated {e['name']} → {e['ref']}")
+        finally:
+            if tmp.exists():
+                shutil.rmtree(tmp)
+    store.write_lock(store.lock_path(home_dir()), entries)
+    return rc
 
 
 def cmd_list(args) -> int:
@@ -145,6 +207,10 @@ def main(argv=None):
     a = sub.add_parser("remove")
     a.add_argument("skill")
     a.set_defaults(fn=cmd_remove)
+    a = sub.add_parser("update")
+    a.add_argument("skill", nargs="?")
+    a.add_argument("--yes", action="store_true")
+    a.set_defaults(fn=cmd_update)
     args = p.parse_args(argv)
     if getattr(args, "fn", None) is None:
         p.print_help()
