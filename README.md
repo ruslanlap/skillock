@@ -62,6 +62,10 @@ uvx skillock add obra/superpowers --skill brainstorming --agents agents --yes
 uvx skillock add obra/superpowers --skill test-driven-development --agents agents --yes
 ```
 
+Actual blocked run against `obra/superpowers`:
+
+![Real skillock blocked install demo](docs/assets/skillock-demo-blocked.png)
+
 ## How It Works
 
 1. **Resolve** — GitHub repo + tag/commit/branch → pinned commit SHA
