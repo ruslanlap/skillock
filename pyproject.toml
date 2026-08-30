@@ -25,12 +25,11 @@ exclude = [".superpowers", "dist", "build"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]
 ignore = [
-    "E501",  # long regex rule lines in scanner.py are intentional
-    "E741",  # single-char loop vars in compact comprehensions
+    "E501",
+    "E741",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# tests use compact fixture setup; E402: sys.path shim before imports
 "tests/*" = ["E402", "E702", "B007"]
 
 [tool.mypy]
@@ -44,6 +43,7 @@ namespace_packages = true
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "pytest-cov>=7.1.0",
     "ruff>=0.6",
     "mypy>=1.11",
     "bandit>=1.7",
