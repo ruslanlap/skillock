@@ -88,7 +88,7 @@ def scan_tree(root: Path) -> list[Finding]:
 
 def detect_skills(repo_dir: Path) -> list[Path]:
     if (repo_dir / "SKILL.md").is_file():
-        return [repo_dir / "SKILL.md"]
+        return [repo_dir]
     if (repo_dir / "skills").is_dir():
         return sorted(p.parent for p in (repo_dir / "skills").glob("*/SKILL.md"))
     found: list[Path] = []

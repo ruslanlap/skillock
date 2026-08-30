@@ -92,7 +92,7 @@ def test_all_p0_rules_present(tmp_path):
 
 def test_detect_root_skill(tmp_path):
     make(tmp_path, "SKILL.md", "---\nname: solo\n---\nbody")
-    assert detect_skills(tmp_path) == [tmp_path / "SKILL.md"]
+    assert detect_skills(tmp_path) == [tmp_path]
 
 
 def test_detect_skills_dir(tmp_path):
