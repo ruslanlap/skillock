@@ -1,12 +1,24 @@
-from pathlib import Path
-from skillock.store import (read_lock, write_lock, sha256_file, hash_tree,
-                            deploy, undeploy, lock_path, store_root, AGENTS)
+from skillock.store import (
+    deploy,
+    hash_tree,
+    read_lock,
+    sha256_file,
+    store_root,
+    undeploy,
+    write_lock,
+)
 
-
-ENTRY = {"name": "polars", "repo": "https://github.com/x/y", "ref": "v0.1.0",
-         "pinned": "tag", "sha": "a" * 40, "installed": "2026-08-30T00:00:00Z",
-         "agents": ["claude"], "files": {"SKILL.md": "b" * 64},
-         "findings": ["P1 network-call-no-auth"]}
+ENTRY = {
+    "name": "polars",
+    "repo": "https://github.com/x/y",
+    "ref": "v0.1.0",
+    "pinned": "tag",
+    "sha": "a" * 40,
+    "installed": "2026-08-30T00:00:00Z",
+    "agents": ["claude"],
+    "files": {"SKILL.md": "b" * 64},
+    "findings": ["P1 network-call-no-auth"],
+}
 
 
 def test_lock_roundtrip(tmp_path):
@@ -40,7 +52,8 @@ def test_hash_tree(tmp_path):
 
 
 def test_deploy_symlinks_into_existing_agents(tmp_path, home):
-    src = tmp_path / "skill"; src.mkdir()
+    src = tmp_path / "skill"
+    src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")
     links = deploy(src, home, "https://github.com/x/y", ["claude", "codex", "cursor"])
     # cursor dir doesn't exist in fixture home → skipped
@@ -53,7 +66,9 @@ def test_deploy_symlinks_into_existing_agents(tmp_path, home):
 def test_deploy_refuses_non_skillock_path(tmp_path, home):
     # data-loss boundary: a real user dir at the agent target must never be rmtree'd
     from skillock.errors import SkillockError
-    src = tmp_path / "skill"; src.mkdir()
+
+    src = tmp_path / "skill"
+    src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")
     target = home / ".claude" / "skills" / "s"
     target.mkdir()
@@ -69,7 +84,8 @@ def test_deploy_refuses_non_skillock_path(tmp_path, home):
 
 
 def test_undeploy_removes_only_ours(tmp_path, home):
-    src = tmp_path / "skill"; src.mkdir()
+    src = tmp_path / "skill"
+    src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")
     deploy(src, home, "https://github.com/x/y", ["claude"])
     stranger = home / ".claude/skills/stranger"

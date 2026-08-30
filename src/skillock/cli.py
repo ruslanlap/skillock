@@ -3,22 +3,32 @@ import difflib
 import os
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from skillock import __version__
+from skillock import __version__, git, scanner, store
 from skillock.errors import SkillockError
-from skillock import git, scanner, store
 
 
 def home_dir() -> Path:
     return Path(os.environ.get("SKILLOCK_HOME") or Path.home())
 
 
+def _rmtree(path: Path) -> None:
+    # git marks object files read-only; plain rmtree fails on Windows (WinError 5)
+    shutil.rmtree(path, onerror=lambda f, p, e: (os.chmod(p, 0o644), f(p)))
+
+
 def _repo_url(spec: str) -> tuple[str, str | None]:
     repo, _, tag = spec.partition("@")
-    url = repo if "://" in repo or repo.startswith(".") or repo.startswith("/") \
+    url = (
+        repo
+        if "://" in repo
+        or repo.startswith((".", "/"))
+        or Path(repo).drive  # Windows path like C:\... or C:/...
+        or (len(repo) > 1 and repo[1] == ":")
         else f"https://github.com/{repo}"
+    )
     return url, tag or None
 
 
@@ -29,8 +39,8 @@ def _print_findings(findings):
 
 def _agents_from_links(links: list[str], home: Path) -> list[str]:
     out = []
-    for l in links:
-        link_path = Path(l)
+    for link in links:
+        link_path = Path(link)
         # Find which agent this link belongs to by checking relative to home
         try:
             rel = link_path.relative_to(home)
@@ -77,7 +87,7 @@ def cmd_add(args) -> int:
     sha, pinned = git.resolve(url, tag)
     tmp = home_dir() / ".local/share/skillock/tmp"
     if tmp.exists():
-        shutil.rmtree(tmp)
+        _rmtree(tmp)
     git.clone_at(url, sha, tmp)
     try:
         skills = scanner.detect_skills(tmp)
@@ -99,31 +109,36 @@ def cmd_add(args) -> int:
             "ref": tag or (sha if pinned == "commit" else git.tags(url)[0]),
             "pinned": pinned,
             "sha": sha,
-            "installed": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "installed": datetime.now(UTC).isoformat(timespec="seconds"),
             "agents": _agents_from_links(links, home_dir()),
             "files": store.hash_tree(store.store_dir_for(home_dir(), url, skill.name)),
             "findings": [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"],
         }
-        entries = [e for e in store.read_lock(store.lock_path(home_dir())) if e["name"] != skill.name]
+        lp = store.lock_path(home_dir())
+        entries = [e for e in store.read_lock(lp) if e["name"] != skill.name]
         entries.append(entry)
         store.write_lock(store.lock_path(home_dir()), entries)
-        print(f"locked {skill.name} @ {entry['ref']} → {', '.join(links)}")
+        print(f"locked {skill.name} @ {entry['ref']} -> {', '.join(links)}")
         return 0
     finally:
         # Clean up tmp clone after deploy
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
 
 
 def _diff(old_dir: Path, new_dir: Path) -> str:
     out = []
-    old = store.hash_tree(old_dir); new = store.hash_tree(new_dir)
+    old = store.hash_tree(old_dir)
+    new = store.hash_tree(new_dir)
     for f in sorted(set(old) | set(new)):
         a = (old_dir / f).read_text(errors="replace") if f in old else ""
         b = (new_dir / f).read_text(errors="replace") if f in new else ""
         if a != b:
-            out.extend(difflib.unified_diff(a.splitlines(True), b.splitlines(True),
-                                            fromfile=f"a/{f}", tofile=f"b/{f}"))
+            out.extend(
+                difflib.unified_diff(
+                    a.splitlines(True), b.splitlines(True), fromfile=f"a/{f}", tofile=f"b/{f}"
+                )
+            )
     return "".join(out)
 
 
@@ -141,7 +156,7 @@ def cmd_update(args) -> int:
             continue
         tmp = home_dir() / ".local/share/skillock/tmp"
         if tmp.exists():
-            shutil.rmtree(tmp)
+            _rmtree(tmp)
         git.clone_at(e["repo"], sha, tmp)
         try:
             skills = scanner.detect_skills(tmp)
@@ -151,7 +166,7 @@ def cmd_update(args) -> int:
                 continue
             skill = next(s for s in skills if s.name == e["name"])
             findings = scanner.scan_tree(skill)
-            if (gate := _gate(findings, args.yes)) is not None:
+            if _gate(findings, args.yes) is not None:
                 print(f"{e['name']}: refusing update, keeping {e['ref']}")
                 rc = 1
                 continue
@@ -162,10 +177,10 @@ def cmd_update(args) -> int:
             e["ref"], e["pinned"] = (newest, "tag") if pinned == "tag" else (sha, "commit")
             e["files"] = store.hash_tree(store.store_dir_for(home_dir(), e["repo"], e["name"]))
             e["findings"] = [f"{f.severity} {f.rule}" for f in findings if f.severity != "P0"]
-            print(f"updated {e['name']} → {e['ref']}")
+            print(f"updated {e['name']} -> {e['ref']}")
         finally:
             if tmp.exists():
-                shutil.rmtree(tmp)
+                _rmtree(tmp)
     store.write_lock(store.lock_path(home_dir()), entries)
     return rc
 
@@ -177,7 +192,7 @@ def cmd_list(args) -> int:
         return 0
     for e in entries:
         verdict = "clean" if not e.get("findings") else f"{len(e['findings'])} finding(s)"
-        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] → {','.join(e['agents'])}")
+        print(f"{e['name']}  {e['repo']}@{e['ref']} [{verdict}] -> {','.join(e['agents'])}")
     return 0
 
 
