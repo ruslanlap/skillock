@@ -1,3 +1,8 @@
+![PyPI](https://img.shields.io/pypi/v/skillock)
+![Python](https://img.shields.io/pypi/pyversions/skillock)
+![License](https://img.shields.io/pypi/l/skillock)
+![CI](https://github.com/ruslanlap/skillock/actions/workflows/ci.yml/badge.svg)
+
 # skillock 🔒
 
 **Security-first package manager for AI agent skills.**  
@@ -88,11 +93,4 @@ Skills are prompts your agent executes — treat them like untrusted code.
 - PyPI: https://pypi.org/project/skillock/
 - Security policy: [SECURITY.md](SECURITY.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md) (if exists)
-
-## Badges
-
-![PyPI](https://img.shields.io/pypi/v/skillock)
-![Python](https://img.shields.io/pypi/pyversions/skillock)
-![License](https://img.shields.io/pypi/l/skillock)
-![CI](https://github.com/ruslanlap/skillock/actions/workflows/ci.yml/badge.svg)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
