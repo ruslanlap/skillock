@@ -101,7 +101,9 @@ def cmd_add(args) -> int:
             raise SkillockError(f"multiple/zero skills detected: {', '.join(names)} — pass --skill")
         skill = next(s for s in skills if s.name == (args.skill or names[0]))
         findings = scanner.scan_tree(skill)
-        if (gate := _gate(findings, args.yes, "would install" if args.dry_run else "installed")) is not None:
+        if (
+            gate := _gate(findings, args.yes, "would install" if args.dry_run else "installed")
+        ) is not None:
             return gate
         if args.dry_run:
             print(f"would install {skill.name} -> {args.agents}")
