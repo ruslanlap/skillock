@@ -29,7 +29,10 @@
 ## Install
 
 ```bash
-# one-off (no install needed)
+# preview a skill without writing anything
+uvx skillock add owner/repo --skill my-skill --agents claude,codex --dry-run
+
+# one-off install (no global install needed)
 uvx skillock add owner/repo --skill my-skill --agents claude,codex
 
 # or install globally

@@ -49,6 +49,14 @@ def test_add_missing_skill_flag_lists_skills(home, benign_repo):
     assert "polars" in r.stdout and "--skill" in r.stdout
 
 
+def test_add_dry_run_shows_verdict_and_writes_nothing(home, benign_repo):
+    r = run_add("add", str(benign_repo), "--skill", "polars", "--agents", "claude", "--dry-run", home=home)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "would install polars" in r.stdout
+    assert not (home / ".claude/skills/polars").exists()
+    assert not (home / ".local/share/skillock/skillock.lock").exists()
+
+
 def test_add_missing_tag_lists_tags(home, benign_repo):
     r = run_add("add", f"{benign_repo}@v9.9.9", "--skill", "polars", home=home)
     assert r.returncode == 1

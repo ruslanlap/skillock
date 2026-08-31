@@ -59,7 +59,7 @@ def _agents_from_links(links: list[str], home: Path) -> list[str]:
     return out
 
 
-def _gate(findings, yes) -> int | None:
+def _gate(findings, yes, ok_label: str | None = None) -> int | None:
     """Shared security gate: returns 1 to abort, None to proceed."""
     p0 = [f for f in findings if f.severity == "P0"]
     p1 = [f for f in findings if f.severity == "P1"]
@@ -78,7 +78,8 @@ def _gate(findings, yes) -> int | None:
             return 1
     if p2:
         _print_findings(p2)
-        print(f"installed with {len(p2)} note(s)")
+        if ok_label:
+            print(f"{ok_label} with {len(p2)} note(s)")
     return None
 
 
@@ -100,8 +101,11 @@ def cmd_add(args) -> int:
             raise SkillockError(f"multiple/zero skills detected: {', '.join(names)} — pass --skill")
         skill = next(s for s in skills if s.name == (args.skill or names[0]))
         findings = scanner.scan_tree(skill)
-        if (gate := _gate(findings, args.yes)) is not None:
+        if (gate := _gate(findings, args.yes, "would install" if args.dry_run else "installed")) is not None:
             return gate
+        if args.dry_run:
+            print(f"would install {skill.name} -> {args.agents}")
+            return 0
         links = store.deploy(skill, home_dir(), url, args.agents.split(","))
         entry = {
             "name": skill.name,
@@ -166,12 +170,15 @@ def cmd_update(args) -> int:
                 continue
             skill = next(s for s in skills if s.name == e["name"])
             findings = scanner.scan_tree(skill)
-            if _gate(findings, args.yes) is not None:
+            if _gate(findings, args.yes, "would update" if args.dry_run else "updated") is not None:
                 print(f"{e['name']}: refusing update, keeping {e['ref']}")
                 rc = 1
                 continue
             old_dir = store.store_dir_for(home_dir(), e["repo"], e["name"])
             print(_diff(old_dir, skill))
+            if args.dry_run:
+                print(f"would update {e['name']} -> {newest if pinned == 'tag' else sha}")
+                continue
             store.deploy(skill, home_dir(), e["repo"], e["agents"])
             e["sha"] = sha
             e["ref"], e["pinned"] = (newest, "tag") if pinned == "tag" else (sha, "commit")
@@ -240,6 +247,7 @@ def main(argv=None):
     a.add_argument("--skill")
     a.add_argument("--agents", default="claude,codex,agents,cursor")
     a.add_argument("--yes", action="store_true")
+    a.add_argument("--dry-run", action="store_true")
     a.set_defaults(fn=cmd_add)
     a = sub.add_parser("list")
     a.set_defaults(fn=cmd_list)
@@ -249,6 +257,7 @@ def main(argv=None):
     a = sub.add_parser("update")
     a.add_argument("skill", nargs="?")
     a.add_argument("--yes", action="store_true")
+    a.add_argument("--dry-run", action="store_true")
     a.set_defaults(fn=cmd_update)
     a = sub.add_parser("audit")
     a.set_defaults(fn=cmd_audit)

@@ -53,6 +53,24 @@ def test_update_blocked_keeps_old(home, tmp_path):
     assert (home / ".claude/skills/s/SKILL.md").read_text().endswith("ok\n")
 
 
+def test_update_dry_run_shows_diff_and_keeps_old(home, tmp_path):
+    repo = _v1_repo(tmp_path)
+    assert (
+        run(
+            "add", f"{repo}@v0.1.0", "--skill", "s", "--agents", "claude", "--yes", home=home
+        ).returncode
+        == 0
+    )
+    before = (home / ".claude/skills/s/SKILL.md").read_text()
+    lock_before = (home / ".local/share/skillock/skillock.lock").read_text()
+    r = run("update", "s", "--dry-run", home=home)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "-old body" in r.stdout and "+good new body" in r.stdout
+    assert "would update s -> v0.3.0" in r.stdout
+    assert (home / ".claude/skills/s/SKILL.md").read_text() == before
+    assert (home / ".local/share/skillock/skillock.lock").read_text() == lock_before
+
+
 def test_update_uptodate(home, benign_repo):
     assert (
         run(
