@@ -5,8 +5,8 @@
 
 # skillock 🔒
 
-**Security-first package manager for AI agent skills.**  
-*Like npm for skills — with audit built into install.*
+**Zero-trust installer for AI agent skills.**  
+*Scan untrusted skills before they ever touch Claude, Codex, Cursor, or Agents.*
 
 ## Features
 
@@ -38,6 +38,25 @@ uv tool install skillock
 | `update [skill]` | rescan + unified diff of every changed file, then upgrade |
 | `remove <skill>` | delete symlinks, store copy, lock entry |
 | `audit` | re-scan everything + verify SHA-256 of every installed file |
+
+## Use skillock when
+
+- you already found a skill and want to **vet it before install**
+- you want **Git-pinned, SHA-verified** skill installs
+- you want one vetted skill deployed to **multiple agents**
+- you want a **local-first** workflow with no hosted registry dependency
+
+## What skillock is not
+
+- not a registry or marketplace for discovering skills
+- not a publishing platform for skill authors
+- not a general sync layer for every skills workflow
+
+| If you need... | Reach for... |
+|---|---|
+| block risky skills before install | `skillock` |
+| discover or publish skills broadly | a registry / package manager |
+| author runtime skill libraries | a framework |
 
 ## What Gets Blocked (P0 — Install Refused)
 
@@ -78,6 +97,9 @@ Actual blocked run against `obra/superpowers`:
 Supported agents: `claude`, `codex`, `agents`, `cursor` (or `--agents all`)
 
 ## Why
+
+Most tools in this space optimize for discovery, sync, or publishing.
+`skillock` optimizes for one narrower job: **stop untrusted skills before install, then pin and lock what passed**.
 
 Real incidents show skills are untrusted code:
 - A polars skill shipped adversarial instructions ([K-Dense-AI/claude-scientific-skills](https://github.com/K-Dense-AI/claude-scientific-skills))

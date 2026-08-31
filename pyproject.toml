@@ -1,10 +1,16 @@
 [project]
 name = "skillock"
 version = "0.1.4"
-description = "Security-first package manager for AI agent skills"
+description = "Zero-trust installer for AI agent skills with scan-before-install"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+keywords = ["ai-agents", "skills", "security", "supply-chain", "cli"]
+
+[project.urls]
+Homepage = "https://github.com/ruslanlap/skillock"
+Repository = "https://github.com/ruslanlap/skillock"
+Issues = "https://github.com/ruslanlap/skillock/issues"
 
 [project.scripts]
 skillock = "skillock.cli:main"
