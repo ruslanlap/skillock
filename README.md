@@ -5,8 +5,15 @@
 
 # skillock 🔒
 
-**Zero-trust installer for AI agent skills.**  
-*Scan untrusted skills before they ever touch Claude, Codex, Cursor, or Agents.*
+**Install AI agent skills without wondering what they will read, run, or change.**  
+*Scan untrusted skills before they touch secrets, shell, or your agent directories.*
+
+## User pains skillock solves
+
+- a skill reads `.env`, `~/.ssh/`, or tokens during install
+- a skill runs `exec`, `curl | sh`, or destructive shell commands
+- an update changes files and you cannot see what drifted
+- the same vetted skill needs to land in multiple agents without manual copy/paste
 
 ## Features
 

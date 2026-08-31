@@ -1,7 +1,7 @@
 [project]
 name = "skillock"
 version = "0.1.4"
-description = "Zero-trust installer for AI agent skills with scan-before-install"
+description = "Blocks risky AI agent skills before they read secrets, run code, or drift unnoticed"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
