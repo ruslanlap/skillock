@@ -1,5 +1,6 @@
 import argparse
 import difflib
+import json
 import os
 import shutil
 import sys
@@ -194,8 +195,27 @@ def cmd_update(args) -> int:
     return rc
 
 
+def _links(home: Path, entry: dict) -> list[dict]:
+    out = []
+    for a in entry.get("agents", []):
+        link = home / store.AGENTS[a] / entry["name"]
+        out.append(
+            {
+                "agent": a,
+                "path": str(link),
+                "exists": link.is_symlink(),
+                "target": str(link.resolve()) if link.is_symlink() else None,
+            }
+        )
+    return out
+
+
 def cmd_list(args) -> int:
     entries = store.read_lock(store.lock_path(home_dir()))
+    if getattr(args, "json", False):
+        out = [dict(e, links=_links(home_dir(), e)) for e in entries]
+        print(json.dumps(out, indent=2))
+        return 0
     if not entries:
         print("nothing installed")
         return 0
@@ -217,6 +237,27 @@ def cmd_remove(args) -> int:
 
 
 def cmd_audit(args) -> int:
+    if getattr(args, "json", False):
+        report: dict[str, dict] = {}
+        for e in store.read_lock(store.lock_path(home_dir())):
+            d = store.store_dir_for(home_dir(), e["repo"], e["name"])
+            findings = scanner.scan_tree(d)
+            cur = store.hash_tree(d)
+            tampered = [fp for fp, h in e["files"].items() if cur.get(fp) != h]
+            tampered += sorted(set(cur) - set(e["files"]))
+            drifted = [f for f in findings if f.severity == "P0"]
+            report[e["name"]] = {
+                "status": "clean"
+                if not (drifted or tampered)
+                else ("tampered" if tampered else "drifted"),
+                "findings": [
+                    {"severity": f.severity, "file": f.file, "line": f.line, "rule": f.rule}
+                    for f in findings
+                ],
+                "tampered_files": tampered,
+            }
+        print(json.dumps(report, indent=2))
+        return 1 if any(v["status"] != "clean" for v in report.values()) else 0
     bad = False
     for e in store.read_lock(store.lock_path(home_dir())):
         d = store.store_dir_for(home_dir(), e["repo"], e["name"])
@@ -252,6 +293,7 @@ def main(argv=None):
     a.add_argument("--dry-run", action="store_true")
     a.set_defaults(fn=cmd_add)
     a = sub.add_parser("list")
+    a.add_argument("--json", action="store_true", help="output as JSON")
     a.set_defaults(fn=cmd_list)
     a = sub.add_parser("remove")
     a.add_argument("skill")
@@ -262,6 +304,7 @@ def main(argv=None):
     a.add_argument("--dry-run", action="store_true")
     a.set_defaults(fn=cmd_update)
     a = sub.add_parser("audit")
+    a.add_argument("--json", action="store_true", help="output as JSON")
     a.set_defaults(fn=cmd_audit)
     args = p.parse_args(argv)
     if getattr(args, "fn", None) is None:
