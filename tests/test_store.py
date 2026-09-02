@@ -64,12 +64,44 @@ def test_deploy_symlinks_into_existing_agents(tmp_path, home):
     src = tmp_path / "skill"
     src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")
-    links = deploy(src, home, "https://github.com/x/y", ["claude", "codex", "cursor"])
-    # cursor dir doesn't exist in fixture home → skipped
+    links = deploy(src, home, "https://github.com/x/y", ["claude", "codex"])
     assert (home / ".claude/skills/s").is_symlink()
     assert (home / ".codex/skills/s").is_symlink()
-    assert not (home / ".cursor/skills/s").exists()
     assert len(links) == 2
+
+
+def test_deploy_missing_agent_dir_raises(tmp_path, home):
+    # security: silently skipping a missing agent dir wrote agents=[] into the lockfile
+    from skillock.errors import SkillockError
+
+    src = tmp_path / "skill"
+    src.mkdir()
+    (src / "SKILL.md").write_text("---\nname: s\n---\n")
+    try:
+        deploy(src, home, "https://github.com/x/y", ["claude", "cursor"])
+    except SkillockError as e:
+        assert "does not exist" in str(e) and "cursor" in str(e)
+    else:
+        raise AssertionError("expected SkillockError")
+    # validation runs before any mutation: nothing deployed anywhere
+    assert not (home / ".claude/skills/s").exists()
+    assert not (home / ".cursor/skills/s").exists()
+    assert not (store_root(home) / "x__y" / "s").exists()
+
+
+def test_deploy_unknown_agent_raises(tmp_path, home):
+    # typo'd agent used to surface as a raw KeyError mid-deploy
+    from skillock.errors import SkillockError
+
+    src = tmp_path / "skill"
+    src.mkdir()
+    (src / "SKILL.md").write_text("---\nname: s\n---\n")
+    try:
+        deploy(src, home, "https://github.com/x/y", ["claud"])
+    except SkillockError as e:
+        assert "unknown agent 'claud'" in str(e)
+    else:
+        raise AssertionError("expected SkillockError")
 
 
 def test_deploy_refuses_non_skillock_path(tmp_path, home):

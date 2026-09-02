@@ -63,3 +63,13 @@ def test_add_missing_tag_lists_tags(home, benign_repo):
     r = run_add("add", f"{benign_repo}@v9.9.9", "--skill", "polars", home=home)
     assert r.returncode == 1
     assert "v9.9.9" in r.stdout
+
+
+def test_add_missing_agent_dir_fails_loudly(home, benign_repo):
+    # home fixture has only .claude/skills and .codex/skills; cursor is absent
+    r = run_add("add", str(benign_repo), "--skill", "polars", "--agents", "cursor", home=home)
+    assert r.returncode == 1
+    assert "does not exist" in r.stdout and ".cursor/skills" in r.stdout
+    # nothing written: no lockfile, no store copy, no links
+    assert not (home / ".local/share/skillock/skillock.lock").exists()
+    assert not (home / ".cursor/skills/polars").exists()
