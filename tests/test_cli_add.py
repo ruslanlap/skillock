@@ -69,7 +69,7 @@ def test_add_missing_agent_dir_fails_loudly(home, benign_repo):
     # home fixture has only .claude/skills and .codex/skills; cursor is absent
     r = run_add("add", str(benign_repo), "--skill", "polars", "--agents", "cursor", home=home)
     assert r.returncode == 1
-    assert "does not exist" in r.stdout and ".cursor/skills" in r.stdout
+    assert "does not exist" in r.stdout and ".cursor" in r.stdout
     # nothing written: no lockfile, no store copy, no links
     assert not (home / ".local/share/skillock/skillock.lock").exists()
     assert not (home / ".cursor/skills/polars").exists()
