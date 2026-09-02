@@ -117,6 +117,10 @@ def _skill_name(skill_dir: Path) -> str:
 
 
 def deploy(skill_dir: Path, home: Path, repo: str, agents: list[str]) -> list[str]:
+    # ponytail: validate agent names before any mutation (atomic fail-fast for typos)
+    for a in agents:
+        if a not in AGENTS:
+            raise SkillockError(f"unknown agent '{a}'. Valid: {', '.join(AGENTS)}") from None
     dest = store_dir_for(home, repo, _skill_name(skill_dir))
     if dest.exists():
         shutil.rmtree(dest)
