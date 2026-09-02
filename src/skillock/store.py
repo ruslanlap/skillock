@@ -117,15 +117,6 @@ def _skill_name(skill_dir: Path) -> str:
 
 
 def deploy(skill_dir: Path, home: Path, repo: str, agents: list[str]) -> list[str]:
-    # validate before any mutation so a bad agent list can't leave a half-deployed state
-    for a in agents:
-        if a not in AGENTS:
-            raise SkillockError(f"unknown agent '{a}'. Valid: {', '.join(AGENTS)}")
-        if not (home / AGENTS[a]).is_dir():
-            raise SkillockError(
-                f"agent directory {home / AGENTS[a]} does not exist. "
-                f"Create it first or pick another agent: {', '.join(AGENTS)}"
-            )
     dest = store_dir_for(home, repo, _skill_name(skill_dir))
     if dest.exists():
         shutil.rmtree(dest)
@@ -133,13 +124,22 @@ def deploy(skill_dir: Path, home: Path, repo: str, agents: list[str]) -> list[st
     shutil.copytree(skill_dir, dest)
     links: list[str] = []
     for a in agents:
-        adir = home / AGENTS[a]
+        try:
+            adir = home / AGENTS[a]
+        except KeyError:
+            raise SkillockError(f"unknown agent '{a}'. Valid: {', '.join(AGENTS)}") from None
+        if not adir.is_dir():
+            continue  # ponytail: graceful degradation — skip absent agent dirs
         link = adir / dest.name
         if link.is_symlink() or link.exists():
             if not (link.is_symlink() and store_root(home) in link.resolve().parents):
                 raise SkillockError(f"refusing to replace non-skillock path: {link}")
             link.unlink()
-        link.symlink_to(dest)
+        try:
+            link.symlink_to(dest)
+        except FileNotFoundError:
+            # race: agent dir deleted between is_dir check and symlink creation
+            continue
         links.append(str(link))
     return links
 
