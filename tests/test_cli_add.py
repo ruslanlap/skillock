@@ -65,11 +65,12 @@ def test_add_missing_tag_lists_tags(home, benign_repo):
     assert "v9.9.9" in r.stdout
 
 
-def test_add_missing_agent_dir_skipped_gracefully(home, benign_repo):
-    # When --agents targets a dir that doesn't exist, add skips it silently.
-    # The skill is still stored; missing dirs get no symlinks.
+def test_add_missing_agent_dir_fails_loudly(home, benign_repo):
+    # silent non-deploy guard: when the ONLY requested agent dir is missing,
+    # add must exit non-zero and write no lockfile (Copilot review on #29)
     r = run_add("add", str(benign_repo), "--skill", "polars", "--agents", "cursor", home=home)
-    assert r.returncode == 0
-    assert (home / ".local/share/skillock/skillock.lock").exists()
-    # cursor dir doesn't exist → symlink never created
+    assert r.returncode == 1
+    assert "no agent directories found" in r.stdout
+    # nothing written: no lockfile, no links
+    assert not (home / ".local/share/skillock/skillock.lock").exists()
     assert not (home / ".cursor/skills/polars").exists()

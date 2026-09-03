@@ -71,9 +71,8 @@ def test_deploy_symlinks_into_existing_agents(tmp_path, home):
 
 
 def test_deploy_missing_agent_dir_skipped_gracefully(tmp_path, home):
-    # When an agent dir doesn't exist, deploy() skips it silently
-    # (graceful degradation). The skill is still stored and symlinked
-    # into existing agent dirs.
+    # A missing agent dir is skipped as long as at least one requested
+    # agent deployed. The skill is stored and symlinked into existing dirs.
     src = tmp_path / "skill"
     src.mkdir()
     (src / "SKILL.md").write_text("---\nname: s\n---\n")
@@ -85,6 +84,22 @@ def test_deploy_missing_agent_dir_skipped_gracefully(tmp_path, home):
     # store has the skill regardless
     assert (store_root(home) / "x__y" / "s").exists()
     assert len(links) == 1
+
+
+def test_deploy_all_agent_dirs_missing_raises(tmp_path, home):
+    # silent non-deploy guard: if EVERY requested agent dir is absent,
+    # deploy() must fail loudly instead of writing agents=[] to the lockfile
+    from skillock.errors import SkillockError
+
+    src = tmp_path / "skill"
+    src.mkdir()
+    (src / "SKILL.md").write_text("---\nname: s\n---\n")
+    try:
+        deploy(src, home, "https://github.com/x/y", ["cursor"])
+    except SkillockError as e:
+        assert "no agent directories found" in str(e)
+    else:
+        raise AssertionError("expected SkillockError")
 
 
 def test_deploy_unknown_agent_raises(tmp_path, home):

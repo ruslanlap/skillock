@@ -145,6 +145,13 @@ def deploy(skill_dir: Path, home: Path, repo: str, agents: list[str]) -> list[st
             # race: agent dir deleted between is_dir check and symlink creation
             continue
         links.append(str(link))
+    if not links:
+        # ponytail: every requested agent dir was absent — a "successful"
+        # add that deploys nowhere is the silent-non-deploy bug this guards
+        raise SkillockError(
+            f"no agent directories found for: {', '.join(agents)}. "
+            f"Create one first, e.g. mkdir -p ~/.claude/skills"
+        )
     return links
 
 
